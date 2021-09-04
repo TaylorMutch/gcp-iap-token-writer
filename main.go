@@ -91,7 +91,7 @@ func newLogger(logLevel string) log.Logger {
 }
 
 func fatalError(logger log.Logger, msg string, err error) {
-	level.Error(logger).Log("msg", msg, "err", err.Error())
+	_ = level.Error(logger).Log("msg", msg, "err", err.Error())
 	os.Exit(1)
 }
 
@@ -109,7 +109,7 @@ func newTokenWriter(ctx context.Context, logger log.Logger, conf Settings) (*tok
 
 	ts, err := idtoken.NewTokenSource(ctx, conf.Audience)
 	if err != nil {
-		level.Error(logger).Log("msg", "failed to create token source", "err", err.Error())
+		_ = level.Error(logger).Log("msg", "failed to create token source", "err", err.Error())
 		return nil, err
 	}
 
@@ -137,12 +137,12 @@ func (tw *tokenWriter) refreshUntilCancel() {
 	ticker := time.NewTicker(time.Second * 2)
 	defer ticker.Stop()
 
-	level.Info(tw.logger).Log("msg", "starting token refresh loop")
+	_ = level.Info(tw.logger).Log("msg", "starting token refresh loop")
 	for {
 		tw.refresh()
 		select {
 		case <-tw.ctx.Done():
-			level.Info(tw.logger).Log("msg", "stopping token refresh loop")
+			_ = level.Info(tw.logger).Log("msg", "stopping token refresh loop")
 			return
 		case <-ticker.C:
 		}
@@ -158,21 +158,21 @@ func (tw *tokenWriter) refresh() {
 
 	// Check if the current token is still valid. If so, nothing to be done
 	if tw.currentToken.Valid() {
-		level.Debug(tw.logger).Log("msg", "token still valid, skipping write to disk")
+		_ = level.Debug(tw.logger).Log("msg", "token still valid, skipping write to disk")
 		return
 	}
 
 	// Otherwise, update the token on disk.
-	level.Info(tw.logger).Log("msg", "renewing token on disk")
+	_ = level.Info(tw.logger).Log("msg", "renewing token on disk")
 	tw.currentToken, err = tw.ts.Token()
 
 	if err != nil {
-		level.Error(tw.logger).Log("msg", "failed to get access token", "err", err.Error())
+		_ = level.Error(tw.logger).Log("msg", "failed to get access token", "err", err.Error())
 	}
 
 	err = ioutil.WriteFile(tw.filepath, []byte(tw.currentToken.AccessToken), 0644)
 	if err != nil {
-		level.Error(tw.logger).Log("msg", fmt.Sprintf("failed to write access token to %s", tw.filepath), "err", err.Error())
+		_ = level.Error(tw.logger).Log("msg", fmt.Sprintf("failed to write access token to %s", tw.filepath), "err", err.Error())
 	}
 }
 
@@ -187,7 +187,7 @@ func handleSignal(logger log.Logger) context.Context {
 		signal.Notify(c, syscall.SIGTERM, os.Interrupt)
 		// wait for signal
 		<-c
-		level.Info(logger).Log("msg", "received shutdown signal")
+		_ = level.Info(logger).Log("msg", "received shutdown signal")
 	}()
 	return ctx
 }
@@ -199,9 +199,9 @@ func gracefulShutdown(ctx context.Context, logger log.Logger, server *http.Serve
 	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), httpShutdownTimeout)
 	defer cancel()
-	level.Info(logger).Log("msg", "gracefully shutting down the metrics server")
+	_ = level.Info(logger).Log("msg", "gracefully shutting down the metrics server")
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		level.Error(logger).Log("msg", "unable to shutdown metrics server", err, err.Error())
+		_ = level.Error(logger).Log("msg", "unable to shutdown metrics server", err, err.Error())
 	}
 }
 
@@ -244,8 +244,7 @@ func main() {
 
 	// Handle graceful shutdown
 	go gracefulShutdown(ctx, logger, server)
-	println("testing3")
-	level.Info(logger).Log("msg", fmt.Sprintf("listening for metrics requests on %s", ":8080"))
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("listening for metrics requests on %s", ":8080"))
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		stdlog.Fatal(err)
 	}
