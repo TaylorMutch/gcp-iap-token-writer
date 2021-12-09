@@ -39,10 +39,10 @@ const (
 )
 
 type Settings struct {
-	LogLevel   string
-	Filepath   string
-	Audience   string
-	MetricPort string
+	LogLevel string
+	Filepath string
+	Audience string
+	Port     string
 }
 
 func (s *Settings) Validate() error {
@@ -55,17 +55,17 @@ func (s *Settings) Validate() error {
 	if s.Audience == "" {
 		return errors.New("audience must be non-empty")
 	}
-	if s.MetricPort == "" {
-		return errors.New("metricport must be non-empty")
+	if s.Port == "" {
+		return errors.New("port must be non-empty")
 	}
 	return nil
 }
 
 var (
-	flagLogLevel   = flag.String("v", "info", "Set the log level. Options are [debug, info, warn, error].")
-	flagMetricPort = flag.String("metricport", "8080", "Set the port to expose prometheus metrics, defaults to 8080")
-	flagAudience   = flag.String("audience", "", "Set the Identity Aware Proxy audience value. Example: RANDOMSTRING.apps.googleusercontent.com")
-	flagFilepath   = flag.String("filepath", "gcptoken", "Set the path for where the token should be written to. Default is current/directory/gcptoken.")
+	flagLogLevel = flag.String("v", "info", "Set the log level. Options are [debug, info, warn, error].")
+	flagPort     = flag.String("port", "8080", "Set the port to expose prometheus metrics, defaults to 8080")
+	flagAudience = flag.String("audience", "", "Set the Identity Aware Proxy audience value. Example: RANDOMSTRING.apps.googleusercontent.com")
+	flagFilepath = flag.String("filepath", "gcptoken", "Set the path for where the token should be written to. Default is current/directory/gcptoken.")
 )
 
 // newLogger creates a new logger for the application
@@ -216,10 +216,10 @@ func main() {
 
 	// Setup configuration
 	conf := Settings{
-		Audience:   *flagAudience,
-		Filepath:   *flagFilepath,
-		LogLevel:   *flagLogLevel,
-		MetricPort: *flagMetricPort,
+		Audience: *flagAudience,
+		Filepath: *flagFilepath,
+		LogLevel: *flagLogLevel,
+		Port:     *flagPort,
 	}
 	if err := conf.Validate(); err != nil {
 		panic(err)
@@ -241,7 +241,7 @@ func main() {
 	})
 	http.Handle("/metrics", promhttp.Handler())
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%s", conf.MetricPort),
+		Addr:         fmt.Sprintf(":%s", conf.Port),
 		ReadTimeout:  httpTimeout,
 		WriteTimeout: httpTimeout,
 		IdleTimeout:  httpIdleTimeout,
@@ -249,7 +249,7 @@ func main() {
 
 	// Handle graceful shutdown
 	go gracefulShutdown(ctx, logger, server)
-	_ = level.Info(logger).Log("msg", fmt.Sprintf("listening for metrics requests on :%s", conf.MetricPort))
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("listening for metrics requests on :%s", conf.Port))
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		stdlog.Fatal(err)
 	}
